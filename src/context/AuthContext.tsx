@@ -198,7 +198,6 @@ export function AuthProvider({
   const login = useCallback(
     async (payload: LoginPayload) => {
       setState((s) => ({ ...s, isLoading: true }));
-      console.log(projectIdRef.current)
       try {
         const data = await callApi<{ user: User; tokens: AuthTokens }>(
           `${apiUrlRef.current}/auth/login`,
