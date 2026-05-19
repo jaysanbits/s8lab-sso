@@ -1,0 +1,78 @@
+{
+  "name": "@s8lab/sso-client",
+  "version": "1.1.0",
+  "description": "SSO authentication components for React — Login, Signup, ForgotPassword, Logout, Profile with Google reCAPTCHA and shadcn UI",
+  "author": "S8 Lab",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@hcaptcha/react-hcaptcha": "^1.1.1",
+    "@radix-ui/react-avatar": "^1.1.1",
+    "@radix-ui/react-checkbox": "^1.1.2",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "react-google-recaptcha": "^3.1.0",
+    "react-hook-form": "^7.54.0",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/react-google-recaptcha": "^2.1.9",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vite-plugin-dts": "^4.3.0",
+    "vite-plugin-lib-inject-css": "^2.1.1"
+  },
+  "keywords": [
+    "sso",
+    "auth",
+    "login",
+    "signup",
+    "react",
+    "shadcn",
+    "recaptcha",
+    "authentication"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/avasarhub/sso-client-sdk"
+  }
+}
