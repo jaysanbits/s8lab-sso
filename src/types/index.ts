@@ -57,7 +57,6 @@ export interface AuthTokens {
 
 export interface AuthState {
   user: User | null;
-  tokens: AuthTokens | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -109,21 +108,20 @@ export interface AuthProviderProps {
    * Base URL of your SSO API server.
    * Expected endpoints:
    *   GET  /auth/config          (with X-Project-Id header)
-   *   POST /auth/login
-   *   POST /auth/signup
-   *   POST /auth/logout
+   *   POST /auth/login           (server sets auth cookie, returns { user })
+   *   POST /auth/signup          (server sets auth cookie, returns { user })
+   *   POST /auth/logout          (server clears auth cookie)
    *   POST /auth/forgot-password
    *   POST /auth/magic-link
    *   GET  /auth/me
    */
   apiUrl: string;
-  /** Project ID sent as X-Project-Id header when loading auth config */
+  /** Project ID sent as X-Project-Id header on every request */
   projectId: string;
-  /** localStorage key prefix for tokens. Default: "sso" */
-  storageKeyPrefix?: string;
   /**
    * Custom fetch handler — override for custom headers, interceptors, etc.
    * Must return the parsed JSON response (or undefined for 204).
+   * Should forward credentials (cookies) to the server.
    */
   fetcher?: <T>(url: string, init: RequestInit) => Promise<T>;
 }

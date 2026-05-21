@@ -13,7 +13,6 @@ import type {
   AuthContextValue,
   AuthProviderProps,
   AuthState,
-  AuthTokens,
   ForgotPasswordPayload,
   LoginPayload,
   MagicLinkPayload,
@@ -41,6 +40,7 @@ function toHeaderRecord(h: HeadersInit | undefined): Record<string, string> {
 async function defaultFetcher<T>(url: string, init: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...toHeaderRecord(init.headers),
@@ -69,7 +69,6 @@ export function AuthProvider({
   children,
   apiUrl,
   projectId,
-  storageKeyPrefix = "sso",
   fetcher,
 }: AuthProviderProps) {
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
@@ -77,7 +76,6 @@ export function AuthProvider({
 
   const [state, setState] = useState<AuthState>({
     user: null,
-    tokens: null,
     isLoading: true,
     isAuthenticated: false,
   });
@@ -102,31 +100,7 @@ export function AuthProvider({
     []
   );
 
-  const tokenKey = `${storageKeyPrefix}:tokens`;
-
-  // ── Token persistence ────────────────────────────────────────────────────────
-
-  const saveTokens = useCallback(
-    (tokens: AuthTokens | null) => {
-      if (tokens) {
-        localStorage.setItem(tokenKey, JSON.stringify(tokens));
-      } else {
-        localStorage.removeItem(tokenKey);
-      }
-    },
-    [tokenKey]
-  );
-
-  const loadTokens = useCallback((): AuthTokens | null => {
-    try {
-      const raw = localStorage.getItem(tokenKey);
-      return raw ? (JSON.parse(raw) as AuthTokens) : null;
-    } catch {
-      return null;
-    }
-  }, [tokenKey]);
-
-  // ── Bootstrap: load config → restore session ─────────────────────────────────
+  // ── Bootstrap: load config → restore session via cookie ──────────────────────
 
   useEffect(() => {
     let cancelled = false;
@@ -138,7 +112,6 @@ export function AuthProvider({
         cfg = await callApi<AuthConfig>(`${apiUrlRef.current}/auth/config`);
         if (!cancelled) setAuthConfig(cfg);
       } catch {
-        // Config fetch failed — degrade gracefully with safe defaults
         cfg = {
           allowSignup: true,
           allowMagicLink: false,
@@ -159,29 +132,15 @@ export function AuthProvider({
         loadRecaptchaV3Script(cfg.captcha.siteKey);
       }
 
-      // 3. Restore session from stored tokens
-      const tokens = loadTokens();
-      if (!tokens?.accessToken) {
-        if (!cancelled) setState((s) => ({ ...s, isLoading: false }));
-        return;
-      }
-
+      // 3. Restore session — cookie is forwarded automatically via credentials: "include"
       try {
-        const user = await callApi<User>(`${apiUrlRef.current}/auth/me`, {
-          headers: { Authorization: `Bearer ${tokens.accessToken}` },
-        });
+        const user = await callApi<User>(`${apiUrlRef.current}/auth/me`);
         if (!cancelled) {
-          setState({ user, tokens, isLoading: false, isAuthenticated: true });
+          setState({ user, isLoading: false, isAuthenticated: true });
         }
       } catch {
-        saveTokens(null);
         if (!cancelled) {
-          setState({
-            user: null,
-            tokens: null,
-            isLoading: false,
-            isAuthenticated: false,
-          });
+          setState({ user: null, isLoading: false, isAuthenticated: false });
         }
       }
     }
@@ -199,68 +158,46 @@ export function AuthProvider({
     async (payload: LoginPayload) => {
       setState((s) => ({ ...s, isLoading: true }));
       try {
-        const data = await callApi<{ user: User; tokens: AuthTokens }>(
+        const data = await callApi<{ user: User }>(
           `${apiUrlRef.current}/auth/login`,
           { method: "POST", body: JSON.stringify(payload) }
         );
-        saveTokens(data.tokens);
-        setState({
-          user: data.user,
-          tokens: data.tokens,
-          isLoading: false,
-          isAuthenticated: true,
-        });
+        setState({ user: data.user, isLoading: false, isAuthenticated: true });
       } catch (err) {
         setState((s) => ({ ...s, isLoading: false }));
         throw err;
       }
     },
-    [callApi, saveTokens]
+    [callApi]
   );
 
   const signup = useCallback(
     async (payload: SignupPayload) => {
       setState((s) => ({ ...s, isLoading: true }));
       try {
-        const data = await callApi<{ user: User; tokens: AuthTokens }>(
+        const data = await callApi<{ user: User }>(
           `${apiUrlRef.current}/auth/signup`,
           { method: "POST", body: JSON.stringify(payload) }
         );
-        saveTokens(data.tokens);
-        setState({
-          user: data.user,
-          tokens: data.tokens,
-          isLoading: false,
-          isAuthenticated: true,
-        });
+        setState({ user: data.user, isLoading: false, isAuthenticated: true });
       } catch (err) {
         setState((s) => ({ ...s, isLoading: false }));
         throw err;
       }
     },
-    [callApi, saveTokens]
+    [callApi]
   );
 
   const logout = useCallback(async () => {
     setState((s) => ({ ...s, isLoading: true }));
     try {
-      const tokens = loadTokens();
-      if (tokens?.accessToken) {
-        await callApi(`${apiUrlRef.current}/auth/logout`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${tokens.accessToken}` },
-        }).catch(() => {});
-      }
+      await callApi(`${apiUrlRef.current}/auth/logout`, {
+        method: "POST",
+      }).catch(() => {});
     } finally {
-      saveTokens(null);
-      setState({
-        user: null,
-        tokens: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
+      setState({ user: null, isLoading: false, isAuthenticated: false });
     }
-  }, [callApi, loadTokens, saveTokens]);
+  }, [callApi]);
 
   const forgotPassword = useCallback(
     async (payload: ForgotPasswordPayload) => {
