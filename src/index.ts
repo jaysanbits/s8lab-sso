@@ -2,7 +2,7 @@
 import "./styles/globals.css";
 
 // ─── Provider & Hooks ─────────────────────────────────────────────────────────
-export { AuthProvider, useAuth, useAuthConfig } from "@/context/AuthContext";
+export { AuthProvider, useAuth, useAuthConfig, GuestRoute } from "@/context/AuthContext";
 
 // ─── Components ───────────────────────────────────────────────────────────────
 export { LoginForm } from "@/components/LoginForm";
