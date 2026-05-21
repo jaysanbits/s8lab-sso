@@ -36,6 +36,7 @@ export interface AuthConfigContextValue {
   config: AuthConfig | null;
   configLoading: boolean;
   apiUrl: string;
+  rootPath: string;
 }
 
 // ─── User & token types ───────────────────────────────────────────────────────
@@ -124,6 +125,11 @@ export interface AuthProviderProps {
    * Should forward credentials (cookies) to the server.
    */
   fetcher?: <T>(url: string, init: RequestInit) => Promise<T>;
+  /**
+   * Path to redirect authenticated users to when they land on a guest route
+   * wrapped with <GuestRoute>. Defaults to "/".
+   */
+  rootPath?: string;
 }
 
 // ─── Component prop types ─────────────────────────────────────────────────────

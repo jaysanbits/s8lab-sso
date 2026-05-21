@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import type {
   AuthConfig,
@@ -97,6 +98,7 @@ export function AuthProvider({
   apiUrl,
   projectId,
   fetcher,
+  rootPath = "/",
 }: AuthProviderProps) {
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
@@ -280,8 +282,8 @@ export function AuthProvider({
   );
 
   const configValue = useMemo<AuthConfigContextValue>(
-    () => ({ config: authConfig, configLoading, apiUrl }),
-    [authConfig, configLoading, apiUrl]
+    () => ({ config: authConfig, configLoading, apiUrl, rootPath }),
+    [authConfig, configLoading, apiUrl, rootPath]
   );
 
   return (
@@ -303,4 +305,20 @@ export function useAuthConfig(): AuthConfigContextValue {
   const ctx = useContext(AuthConfigContext);
   if (!ctx) throw new Error("useAuthConfig must be used inside <AuthProvider>");
   return ctx;
+}
+
+// ─── GuestRoute ───────────────────────────────────────────────────────────────
+
+export function GuestRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { rootPath } = useAuthConfig();
+
+  if (isLoading) return null;
+
+  if (isAuthenticated) {
+    window.location.replace(rootPath);
+    return null;
+  }
+
+  return <>{children}</>;
 }
