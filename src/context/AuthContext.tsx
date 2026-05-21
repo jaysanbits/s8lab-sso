@@ -309,11 +309,33 @@ export function useAuthConfig(): AuthConfigContextValue {
 
 // ─── GuestRoute ───────────────────────────────────────────────────────────────
 
+function AuthPageSkeleton() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-sm animate-pulse space-y-6 rounded-xl border bg-card p-8 shadow-sm">
+        <div className="space-y-2">
+          <div className="mx-auto h-8 w-24 rounded-md bg-muted" />
+          <div className="mx-auto h-4 w-40 rounded bg-muted" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-4 w-16 rounded bg-muted" />
+          <div className="h-10 w-full rounded-md bg-muted" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-4 w-20 rounded bg-muted" />
+          <div className="h-10 w-full rounded-md bg-muted" />
+        </div>
+        <div className="h-10 w-full rounded-md bg-muted" />
+      </div>
+    </div>
+  );
+}
+
 export function GuestRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const { rootPath } = useAuthConfig();
 
-  if (isLoading) return null;
+  if (isLoading) return <AuthPageSkeleton />;
 
   if (isAuthenticated) {
     window.location.replace(rootPath);
