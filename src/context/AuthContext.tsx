@@ -35,6 +35,15 @@ function toHeaderRecord(h: HeadersInit | undefined): Record<string, string> {
   return h as Record<string, string>;
 }
 
+// ─── HTTP error with status code ──────────────────────────────────────────────
+
+class HttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 // ─── Default fetcher ──────────────────────────────────────────────────────────
 
 async function defaultFetcher<T>(url: string, init: RequestInit): Promise<T> {
@@ -56,11 +65,29 @@ async function defaultFetcher<T>(url: string, init: RequestInit): Promise<T> {
     } catch {
       // ignore
     }
-    throw new Error(message);
+    throw new HttpError(res.status, message);
   }
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+// ─── Token refresh (module-level lock so concurrent 401s share one attempt) ───
+
+let refreshPromise: Promise<boolean> | null = null;
+
+function attemptRefresh(apiUrl: string): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = fetch(`${apiUrl}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
+    .then((r) => r.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -87,18 +114,30 @@ export function AuthProvider({
   const fetchRef = useRef(fetcher ?? defaultFetcher);
   fetchRef.current = fetcher ?? defaultFetcher;
 
-  // Wraps fetchRef to always include X-Project-Id header on every request
-  const callApi = useCallback(
-    <T,>(url: string, init: RequestInit = {}): Promise<T> =>
+  // Wraps fetchRef to always include X-Project-Id header on every request.
+  // On 401, attempts one token refresh then retries; logs out if refresh fails.
+  const callApi = useCallback(async <T,>(url: string, init: RequestInit = {}): Promise<T> => {
+    const makeRequest = () =>
       (fetchRef.current as typeof defaultFetcher)<T>(url, {
         ...init,
         headers: {
           ...toHeaderRecord(init.headers),
           "X-Project-Id": projectIdRef.current,
         },
-      }),
-    []
-  );
+      });
+
+    try {
+      return await makeRequest();
+    } catch (err: unknown) {
+      if (!(err instanceof HttpError) || err.status !== 401) throw err;
+      const refreshed = await attemptRefresh(apiUrlRef.current);
+      if (!refreshed) {
+        setState({ user: null, isLoading: false, isAuthenticated: false });
+        throw err;
+      }
+      return makeRequest();
+    }
+  }, []);
 
   // ── Bootstrap: load config → restore session via cookie ──────────────────────
 
